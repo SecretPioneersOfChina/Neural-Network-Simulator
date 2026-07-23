@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>神经网络手写识别演示器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== 顶部标题 ===== -->
+<header class="header">
+  <div class="header-icon">🧠</div>
+  <div>
+    <h1>神经网络手写识别演示器</h1>
+    <p id="headerDesc">784 → 128 → 64 → 10 · Softmax · 支持自定义符号训练</p>
+  </div>
+</header>
+
+<!-- ===== 主布局 ===== -->
+<div class="main-layout">
+
+  <!-- ========== 左栏：画板 ========== -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <!-- 画板 -->
+    <div class="card">
+      <div class="card-title">✏️ 手写画板</div>
+      <div class="canvas-wrap">
+        <canvas id="drawCanvas" width="280" height="280"></canvas>
+        <span class="canvas-hint">鼠标 / 触摸 绘制</span>
+      </div>
+      <div class="range-row" style="margin-top:12px;">
+        <label>笔刷大小</label>
+        <input type="range" id="brushSize" min="6" max="36" value="18" style="flex:1;">
+        <span class="range-val" id="brushDisplay">18</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" id="btnPredict">🔍 识别</button>
+        <button class="btn-ghost" id="btnClear">🗑 清空</button>
+      </div>
+    </div>
+
+    <!-- 识别结果 -->
+    <div class="card">
+      <div class="card-title">🎯 识别结果</div>
+      <div class="result-box">
+        <div class="result-digit" id="resultLabel">?</div>
+        <div>
+          <div class="result-title">预测类别</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);">点击「识别」查看概率分布</div>
+        </div>
+      </div>
+      <div id="probBars"></div>
+    </div>
+
+  </div>
+
+  <!-- ========== 中栏：训练控制 ========== -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <!-- 自定义符号训练 -->
+    <div class="card">
+      <div class="card-title">➕ 自定义符号训练</div>
+      <div class="custom-section">
+        <h4>1. 在画板上画出符号，填写名称后点击「添加样本」</h4>
+        <div class="input-row">
+          <input type="text" id="customLabel" placeholder="符号名称，如：A、❤、猫"
+            maxlength="8" style="flex:1;">
+          <button class="btn-success" id="btnAddSample">＋ 添加样本</button>
+          <button class="btn-danger" id="btnDeleteLabel" title="删除此类别">✕</button>
+        </div>
+        <div class="sample-stat" id="sampleCount">自定义样本：0 个</div>
+        <div class="label-badges" id="labelList"></div>
+      </div>
+
+      <div class="info-box">
+        <strong>💡 使用提示：</strong>每个类别建议添加 <strong>10~30 个</strong> 不同笔迹样本，
+        样本越多识别越准。添加完毕后点击「开始训练」。<br>
+        默认已包含 <strong>数字 0-9</strong>，可直接训练后识别手写数字。
+      </div>
+
+      <hr class="divider">
+
+      <div class="custom-section">
+        <h4>2. 调整训练参数</h4>
+        <div class="range-row">
+          <label>学习率</label>
+          <input type="range" id="lrInput" min="0.001" max="0.1" step="0.001"
+            value="0.01" style="flex:1;">
+          <span class="range-val" id="lrDisplay">0.01</span>
+        </div>
+      </div>
+
+      <div class="train-status">
+        <div>🔄 <span id="epochCount">迭代：0</span></div>
+        <div>📉 <span id="lossDisplay">损失：-</span></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-success" id="btnTrain">▶ 开始训练</button>
+        <button class="btn-warn" id="btnReset">↺ 重置网络</button>
+        <button class="btn-ghost" id="btnSave">💾 保存权重</button>
+        <button class="btn-ghost" id="btnLoad">📂 加载权重</button>
+      </div>
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
+    </div>
+
+    <!-- 损失曲线 -->
+    <div class="card">
+      <div class="card-title">📉 训练损失曲线</div>
+      <canvas id="lossCanvas" width="600" height="120"></canvas>
+      <div style="font-size:0.7rem;color:var(--text-dim);margin-top:6px;text-align:center;">
+        最近 200 步平均交叉熵损失
+      </div>
+    </div>
+
+    <!-- 工作流程说明 -->
+    <div class="card">
+      <div class="card-title">📋 使用流程</div>
+      <div style="font-size:0.78rem;color:var(--text-dim);line-height:2;">
+        <div>① <b style="color:var(--accent)">画符号</b> → 在左侧画板手写</div>
+        <div>② <b style="color:var(--accent2)">填名称</b> → 输入这个符号的标签（如 "A"）</div>
+        <div>③ <b style="color:var(--gold)">添样本</b> → 点"添加样本"，重复 10+ 次</div>
+        <div>④ <b style="color:var(--accent)">训练</b> → 点"开始训练"直到损失降低</div>
+        <div>⑤ <b style="color:var(--accent2)">识别</b> → 画新符号，点"识别"查看结果</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== 右栏：网络可视化 ========== -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <div class="card">
+      <div class="card-title">🔬 网络激活可视化</div>
+      <canvas id="vizCanvas" width="260" height="320"></canvas>
+      <div style="font-size:0.7rem;color:var(--text-dim);margin-top:6px;text-align:center;">
+        点击「识别」查看信号传播动画
+      </div>
+    </div>
+
+    <!-- 网络架构编辑器 -->
+    <div class="card">
+      <div class="card-title">🏗️ 网络架构编辑器</div>
+
+      <!-- 层列表（动态渲染） -->
+      <div id="layerEditor"></div>
+
+      <!-- 添加隐藏层按钮 -->
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn-success" id="btnAddLayer" title="在末尾添加一个隐藏层">＋ 添加隐藏层</button>
+        <button class="btn-primary" id="btnApplyArch" title="应用当前架构并重建网络">✔ 应用架构</button>
+      </div>
+
+      <div class="info-box" style="margin-top:8px;">
+        <strong>⚠️ 应用架构</strong>会重建网络并<strong>清除训练权重</strong>。<br>
+        隐藏层数量：<strong id="hiddenCount">2</strong>，
+        输出层神经元数由类别数自动决定。
+      </div>
+
+      <hr class="divider">
+
+      <!-- 固定参数 -->
+      <div style="font-size:0.78rem;line-height:2;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">损失函数</span>
+          <span style="color:var(--accent);">交叉熵</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">优化器</span>
+          <span style="color:var(--accent);">SGD</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">隐层激活</span>
+          <span style="color:var(--accent);">ReLU</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">输出激活</span>
+          <span style="color:var(--accent);">Softmax</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">输出层</span>
+          <span style="color:#ef9a9a;font-weight:700;" id="outputInfo">10 类别</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Toast 提示 -->
+<div id="toast"></div>
+
+<!-- 脚本 -->
+<script src="nn.js"></script>
+<script src="app.js"></script>
+
+<!-- 同步更新输出层类别数 -->
+<script>
+  const _origResize = NeuralNetwork.prototype.resizeOutput;
+  NeuralNetwork.prototype.resizeOutput = function(n) {
+    _origResize.call(this, n);
+    const el = document.getElementById('outputInfo');
+    if (el) el.textContent = n + ' 类别';
+  };
+</script>
+
+</body>
+</html>
